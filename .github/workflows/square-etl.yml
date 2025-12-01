@@ -1,0 +1,55 @@
+name: Square ETL to Neon
+
+on:
+  schedule:
+    # Every night at 3:00 AM UTC (10 PM previous day EST)
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Square payments ETL
+        env:
+          SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+          NEON_DATABASE_URL:   ${{ secrets.NEON_DATABASE_URL }}
+          TENANT_ID:           ${{ secrets.TENANT_ID }}
+          POS_PROVIDER:        ${{ secrets.POS_PROVIDER }}
+          POS_PROVIDER_ACCOUNT_ID: ${{ secrets.POS_PROVIDER_ACCOUNT_ID }}
+          SQUARE_API_VERSION:  ${{ secrets.SQUARE_API_VERSION }}
+          SYNC_LOOKBACK_HOURS: ${{ secrets.SYNC_LOOKBACK_HOURS }}
+        run: npm run etl:square:payments
+
+      - name: Run Square orders ETL
+        env:
+          SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+          NEON_DATABASE_URL:   ${{ secrets.NEON_DATABASE_URL }}
+          TENANT_ID:           ${{ secrets.TENANT_ID }}
+          POS_PROVIDER:        ${{ secrets.POS_PROVIDER }}
+          POS_PROVIDER_ACCOUNT_ID: ${{ secrets.POS_PROVIDER_ACCOUNT_ID }}
+          SQUARE_API_VERSION:  ${{ secrets.SQUARE_API_VERSION }}
+          SYNC_LOOKBACK_HOURS: ${{ secrets.SYNC_LOOKBACK_HOURS }}
+        run: npm run etl:square:orders
+
+      - name: Run Square catalog ETL
+        env:
+          SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+          NEON_DATABASE_URL:   ${{ secrets.NEON_DATABASE_URL }}
+          TENANT_ID:           ${{ secrets.TENANT_ID }}
+          POS_PROVIDER:        ${{ secrets.POS_PROVIDER }}
+          POS_PROVIDER_ACCOUNT_ID: ${{ secrets.POS_PROVIDER_ACCOUNT_ID }}
+          SQUARE_API_VERSION:  ${{ secrets.SQUARE_API_VERSION }}
+        run: npm run etl:square:catalog
