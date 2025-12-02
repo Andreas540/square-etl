@@ -2,8 +2,8 @@ name: Square ETL to Neon
 
 on:
   schedule:
-    # Every night at 3:00 AM UTC (10 PM previous day EST)
-    - cron: "0 3 * * *"
+    # Every hour at xx:50 (UTC)
+    - cron: "50 * * * *"
   workflow_dispatch: {}
 
 jobs:
