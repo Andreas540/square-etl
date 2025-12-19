@@ -162,6 +162,7 @@ export interface SquareCatalogObject {
   is_deleted?: boolean;
   item_data?: {
     name?: string;
+    category_id?: string;  // ← ADD THIS LINE
   };
   item_variation_data?: {
     name?: string;
@@ -290,6 +291,74 @@ export async function fetchInventoryCounts(): Promise<SquareInventoryCount[]> {
     const data = (await res.json()) as BatchRetrieveInventoryCountsResponse;
     if (data.counts && data.counts.length > 0) {
       all.push(...data.counts);
+    }
+
+    cursor = data.cursor;
+  } while (cursor);
+
+  return all;
+}
+
+/** ----- CATEGORIES ----- **/
+
+export interface SquareCategoryObject {
+  id: string;
+  type: string;
+  is_deleted?: boolean;
+  category_data?: {
+    name?: string;
+    parent_category?: {
+      ordinal?: number;
+    };
+    is_top_level?: boolean;
+  };
+}
+
+interface CategoryResponse {
+  objects?: SquareCategoryObject[];
+  cursor?: string;
+}
+
+/**
+ * Fetch category objects from Square Catalog.
+ */
+export async function fetchCategories(): Promise<SquareCategoryObject[]> {
+  const all: SquareCategoryObject[] = [];
+  let cursor: string | undefined = undefined;
+
+  do {
+    const url = new URL(`${SQUARE_BASE_URL}/v2/catalog/list`);
+
+    url.searchParams.set("types", "CATEGORY");
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    }
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${SQUARE_ACCESS_TOKEN}`,
+        "Square-Version": SQUARE_API_VERSION,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (res.status === 429) {
+      console.warn("Rate limited by Square (categories), waiting 10s…");
+      await new Promise((r) => setTimeout(r, 10_000));
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `Square categories request failed: ${res.status} ${res.statusText} – ${body}`
+      );
+    }
+
+    const data = (await res.json()) as CategoryResponse;
+    if (data.objects && data.objects.length > 0) {
+      all.push(...data.objects);
     }
 
     cursor = data.cursor;

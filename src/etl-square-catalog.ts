@@ -23,13 +23,15 @@ interface CatalogRow {
   item_name: string | null;
   variation_name: string | null;
   sku: string | null;
+  category_id: string | null;  // ← ADD THIS LINE
   is_deleted: boolean;
   raw_payload: string;
 }
 
 function mapVariationToRow(
   variation: SquareCatalogObject,
-  parentName: string | null
+  parentName: string | null,
+  parentCategoryId: string | null  // ← ADD THIS PARAMETER
 ): CatalogRow | null {
   if (!variation.id) {
     console.warn("Variation catalog object without id – skipping");
@@ -50,6 +52,7 @@ function mapVariationToRow(
     item_name: itemName,
     variation_name: variationName,
     sku,
+    category_id: parentCategoryId,  // ← ADD THIS LINE
     is_deleted: isDeleted,
     raw_payload: JSON.stringify(variation),
   };
@@ -75,6 +78,7 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
         item_name,
         variation_name,
         sku,
+        category_id,
         is_deleted,
         raw_payload
       )
@@ -82,7 +86,7 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
         $1, $2, $3,
         $4, $5, $6,
         $7, $8, $9,
-        $10
+        $10, $11
       )
       ON CONFLICT (tenant_id, provider, provider_account_id, catalog_object_id)
       DO UPDATE SET
@@ -90,6 +94,7 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
         item_name      = EXCLUDED.item_name,
         variation_name = EXCLUDED.variation_name,
         sku            = EXCLUDED.sku,
+        category_id    = EXCLUDED.category_id,
         is_deleted     = EXCLUDED.is_deleted,
         raw_payload    = EXCLUDED.raw_payload;
     `;
@@ -104,6 +109,7 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
         row.item_name,
         row.variation_name,
         row.sku,
+        row.category_id,  // ← ADD THIS LINE
         row.is_deleted,
         row.raw_payload,
       ];
@@ -122,32 +128,38 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
 
 async function main() {
   console.log("Fetching catalog ITEM and ITEM_VARIATION objects from Square…");
-  // Fetch both ITEM and ITEM_VARIATION
   const objects: SquareCatalogObject[] = await fetchCatalogObjects("ITEM,ITEM_VARIATION");
   console.log(`Fetched ${objects.length} catalog objects from Square.`);
 
   const itemNameById = new Map<string, string>();
+  const itemCategoryById = new Map<string, string>();  // ← ADD THIS LINE
 
-  // 1) Build map of ITEM.id -> ITEM.item_data.name
+  // 1) Build maps of ITEM.id -> ITEM.item_data.name and ITEM.id -> category_id
   for (const obj of objects) {
     if (obj.type === "ITEM") {
       const id = obj.id;
       const name = obj.item_data?.name;
+      const categoryId = obj.item_data?.category_id;  // ← ADD THIS LINE
+      
       if (id && name) {
         itemNameById.set(id, name);
+      }
+      if (id && categoryId) {  // ← ADD THIS BLOCK
+        itemCategoryById.set(id, categoryId);
       }
     }
   }
 
   const rows: CatalogRow[] = [];
 
-  // 2) Process ITEM_VARIATIONs, using parent item name when possible
+  // 2) Process ITEM_VARIATIONs, using parent item name and category when possible
   for (const obj of objects) {
     if (obj.type === "ITEM_VARIATION") {
       const parentItemId = obj.item_variation_data?.item_id ?? null;
       const parentName = parentItemId ? itemNameById.get(parentItemId) ?? null : null;
+      const parentCategoryId = parentItemId ? itemCategoryById.get(parentItemId) ?? null : null;  // ← ADD THIS LINE
 
-      const row = mapVariationToRow(obj, parentName);
+      const row = mapVariationToRow(obj, parentName, parentCategoryId);  // ← UPDATE THIS LINE
       if (row) {
         rows.push(row);
       }
