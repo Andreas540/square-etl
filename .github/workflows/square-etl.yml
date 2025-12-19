@@ -53,3 +53,13 @@ jobs:
           POS_PROVIDER_ACCOUNT_ID: ${{ secrets.POS_PROVIDER_ACCOUNT_ID }}
           SQUARE_API_VERSION:  ${{ secrets.SQUARE_API_VERSION }}
         run: npm run etl:square:catalog
+
+        - name: Run Square inventory ETL
+        env:
+          SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+          NEON_DATABASE_URL:   ${{ secrets.NEON_DATABASE_URL }}
+          TENANT_ID:           ${{ secrets.TENANT_ID }}
+          POS_PROVIDER:        ${{ secrets.POS_PROVIDER }}
+          POS_PROVIDER_ACCOUNT_ID: ${{ secrets.POS_PROVIDER_ACCOUNT_ID }}
+          SQUARE_API_VERSION:  ${{ secrets.SQUARE_API_VERSION }}
+        run: npm run etl:square:inventory

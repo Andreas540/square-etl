@@ -5,7 +5,8 @@
   "scripts": {
     "etl:square:payments": "tsx src/etl-square-payments.ts",
     "etl:square:orders": "tsx src/etl-square-orders.ts",
-    "etl:square:catalog": "tsx src/etl-square-catalog.ts"
+    "etl:square:catalog": "tsx src/etl-square-catalog.ts",
+    "etl:square:inventory": "tsx src/etl-square-inventory.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.0",

@@ -226,3 +226,74 @@ export async function fetchCatalogObjects(
   return all;
 }
 
+// Add to src/square.ts (at the end, before the final export or at the bottom)
+
+/** ----- INVENTORY ----- **/
+
+export interface SquareInventoryCount {
+  catalog_object_id?: string;
+  catalog_object_type?: string;
+  state?: string; // e.g., "IN_STOCK", "SOLD", "WASTE"
+  location_id?: string;
+  quantity?: string;
+  calculated_at?: string;
+}
+
+interface BatchRetrieveInventoryCountsResponse {
+  counts?: SquareInventoryCount[];
+  cursor?: string;
+}
+
+/**
+ * Fetch inventory counts for all catalog items across all locations.
+ * Uses BatchRetrieveInventoryCounts endpoint with pagination.
+ */
+export async function fetchInventoryCounts(): Promise<SquareInventoryCount[]> {
+  const all: SquareInventoryCount[] = [];
+  let cursor: string | undefined = undefined;
+
+  do {
+    const url = new URL(`${SQUARE_BASE_URL}/v2/inventory/counts/batch-retrieve`);
+
+    const body: any = {
+      // Leave catalog_object_ids empty to fetch all items
+      // Leave location_ids empty to fetch all locations
+    };
+
+    if (cursor) {
+      body.cursor = cursor;
+    }
+
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SQUARE_ACCESS_TOKEN}`,
+        "Square-Version": SQUARE_API_VERSION,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 429) {
+      console.warn("Rate limited by Square (inventory), waiting 10s…");
+      await new Promise((r) => setTimeout(r, 10_000));
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `Square inventory request failed: ${res.status} ${res.statusText} – ${body}`
+      );
+    }
+
+    const data = (await res.json()) as BatchRetrieveInventoryCountsResponse;
+    if (data.counts && data.counts.length > 0) {
+      all.push(...data.counts);
+    }
+
+    cursor = data.cursor;
+  } while (cursor);
+
+  return all;
+}
