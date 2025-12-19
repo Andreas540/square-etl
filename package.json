@@ -7,7 +7,8 @@
     "etl:square:orders": "tsx src/etl-square-orders.ts",
     "etl:square:catalog": "tsx src/etl-square-catalog.ts",
     "etl:square:inventory": "tsx src/etl-square-inventory.ts",
-    "etl:square:categories": "tsx src/etl-square-categories.ts"
+    "etl:square:categories": "tsx src/etl-square-categories.ts",
+    "etl:square:locations": "tsx src/etl-square-locations.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.0",

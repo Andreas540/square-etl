@@ -369,3 +369,54 @@ export async function fetchCategories(): Promise<SquareCategoryObject[]> {
 
   return all;
 }
+
+/** ----- LOCATIONS ----- **/
+
+export interface SquareLocation {
+  id?: string;
+  name?: string;
+  address?: {
+    address_line_1?: string;
+    locality?: string;
+    administrative_district_level_1?: string;
+    postal_code?: string;
+  };
+  timezone?: string;
+  status?: string;
+}
+
+interface LocationsResponse {
+  locations?: SquareLocation[];
+}
+
+/**
+ * Fetch all locations from Square.
+ */
+export async function fetchLocations(): Promise<SquareLocation[]> {
+  const url = new URL(`${SQUARE_BASE_URL}/v2/locations`);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${SQUARE_ACCESS_TOKEN}`,
+      "Square-Version": SQUARE_API_VERSION,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (res.status === 429) {
+    console.warn("Rate limited by Square (locations), waiting 10s…");
+    await new Promise((r) => setTimeout(r, 10_000));
+    return fetchLocations(); // Retry
+  }
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      `Square locations request failed: ${res.status} ${res.statusText} – ${body}`
+    );
+  }
+
+  const data = (await res.json()) as LocationsResponse;
+  return data.locations || [];
+}
