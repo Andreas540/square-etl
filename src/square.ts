@@ -158,11 +158,14 @@ export async function fetchOrder(orderId: string): Promise<SquareOrder | null> {
 
 export interface SquareCatalogObject {
   id: string;
-  type: string; // e.g. 'ITEM', 'ITEM_VARIATION', 'CATEGORY', etc.
+  type: string;
   is_deleted?: boolean;
   item_data?: {
     name?: string;
-    category_id?: string;  // ← ADD THIS LINE
+    categories?: Array<{   // ← CHANGE THIS
+      id: string;
+      ordinal?: number;
+    }>;
   };
   item_variation_data?: {
     name?: string;

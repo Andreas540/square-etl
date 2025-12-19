@@ -23,7 +23,7 @@ interface CatalogRow {
   item_name: string | null;
   variation_name: string | null;
   sku: string | null;
-  category_id: string | null;  // ← ADD THIS LINE
+  category_id: string | null;
   is_deleted: boolean;
   raw_payload: string;
 }
@@ -31,7 +31,7 @@ interface CatalogRow {
 function mapVariationToRow(
   variation: SquareCatalogObject,
   parentName: string | null,
-  parentCategoryId: string | null  // ← ADD THIS PARAMETER
+  parentCategoryId: string | null
 ): CatalogRow | null {
   if (!variation.id) {
     console.warn("Variation catalog object without id – skipping");
@@ -52,7 +52,7 @@ function mapVariationToRow(
     item_name: itemName,
     variation_name: variationName,
     sku,
-    category_id: parentCategoryId,  // ← ADD THIS LINE
+    category_id: parentCategoryId,
     is_deleted: isDeleted,
     raw_payload: JSON.stringify(variation),
   };
@@ -109,7 +109,7 @@ async function upsertCatalogRows(rows: CatalogRow[]) {
         row.item_name,
         row.variation_name,
         row.sku,
-        row.category_id,  // ← ADD THIS LINE
+        row.category_id,
         row.is_deleted,
         row.raw_payload,
       ];
@@ -132,19 +132,20 @@ async function main() {
   console.log(`Fetched ${objects.length} catalog objects from Square.`);
 
   const itemNameById = new Map<string, string>();
-  const itemCategoryById = new Map<string, string>();  // ← ADD THIS LINE
+  const itemCategoryById = new Map<string, string>();
 
   // 1) Build maps of ITEM.id -> ITEM.item_data.name and ITEM.id -> category_id
   for (const obj of objects) {
     if (obj.type === "ITEM") {
       const id = obj.id;
       const name = obj.item_data?.name;
-      const categoryId = obj.item_data?.category_id;  // ← ADD THIS LINE
+      // Extract first category ID from categories array
+      const categoryId = obj.item_data?.categories?.[0]?.id;
       
       if (id && name) {
         itemNameById.set(id, name);
       }
-      if (id && categoryId) {  // ← ADD THIS BLOCK
+      if (id && categoryId) {
         itemCategoryById.set(id, categoryId);
       }
     }
@@ -157,31 +158,14 @@ async function main() {
     if (obj.type === "ITEM_VARIATION") {
       const parentItemId = obj.item_variation_data?.item_id ?? null;
       const parentName = parentItemId ? itemNameById.get(parentItemId) ?? null : null;
-      const parentCategoryId = parentItemId ? itemCategoryById.get(parentItemId) ?? null : null;  // ← ADD THIS LINE
+      const parentCategoryId = parentItemId ? itemCategoryById.get(parentItemId) ?? null : null;
 
-      const row = mapVariationToRow(obj, parentName, parentCategoryId);  // ← UPDATE THIS LINE
+      const row = mapVariationToRow(obj, parentName, parentCategoryId);
       if (row) {
         rows.push(row);
       }
     }
   }
-
-  // After line 155 (after processing ITEM_VARIATIONs), add this:
-for (const obj of objects) {
-  if (obj.type === "ITEM") {
-    const row: CatalogRow = {
-      catalog_object_id: obj.id,
-      object_type: obj.type,
-      item_name: obj.item_data?.name ?? null,
-      variation_name: null,
-      sku: null,
-      category_id: obj.item_data?.category_id ?? null,
-      is_deleted: obj.is_deleted ?? false,
-      raw_payload: JSON.stringify(obj),
-    };
-    rows.push(row);
-  }
-}
 
   console.log(`Prepared ${rows.length} variation rows to upsert…`);
   await upsertCatalogRows(rows);
