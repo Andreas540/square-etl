@@ -166,6 +166,23 @@ async function main() {
     }
   }
 
+  // After line 155 (after processing ITEM_VARIATIONs), add this:
+for (const obj of objects) {
+  if (obj.type === "ITEM") {
+    const row: CatalogRow = {
+      catalog_object_id: obj.id,
+      object_type: obj.type,
+      item_name: obj.item_data?.name ?? null,
+      variation_name: null,
+      sku: null,
+      category_id: obj.item_data?.category_id ?? null,
+      is_deleted: obj.is_deleted ?? false,
+      raw_payload: JSON.stringify(obj),
+    };
+    rows.push(row);
+  }
+}
+
   console.log(`Prepared ${rows.length} variation rows to upsert…`);
   await upsertCatalogRows(rows);
 }
